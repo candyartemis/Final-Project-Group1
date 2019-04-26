@@ -32,4 +32,4 @@ sudo apt_get install libav-tools
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
+* Hat tip to [ruohoruotsi](https://github.com/ruohoruotsi/LSTM-Music-Genre-Classification)'s code
