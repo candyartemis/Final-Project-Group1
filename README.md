@@ -14,7 +14,7 @@ or
 ```
 pip install librosa
 ```
-note that if you install via pip on a ubuntu based system, install libav-tools is also needed for loading audio files
+note that if you install via pip on a ubuntu based system, libav-tools is also needed for loading audio files
 ```
 sudo apt_get install libav-tools
 ```
