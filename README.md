@@ -1,6 +1,8 @@
 # Final-Project-Group1-Audio Tagging with LSTM
 
-One Paragraph of project description goes here
+We are using the [Medley-solos](https://zenodo.org/record/2582103#.XMOHKi2ZNE5) dataset for musical instrument recognision. Each audio clip in training set and test set is 3-second long, and contains a single instrument sound. There are 8 classes of instruments in total: clarinet, distorted electric guitar, female singer, flute, piano, tenor saxophone, trumpet, and violin.
+
+LTSM model is selected for the audio tagging since it is a time series problem. We extract the time series data from the audio clips with librosa, and write the code using Pytorch framework.
 
 ### Prerequisites
 
