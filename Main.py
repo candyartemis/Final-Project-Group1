@@ -4,7 +4,7 @@ import librosa
 #import IPython.display as ipd
 #import math
 #import re
-#from scipy.io import wavfile
+from scipy.io import wavfile
 #import matplotlib.pyplot as plt
 #from torch.autograd import Variable
 import librosa.display
@@ -18,8 +18,8 @@ import torch.nn as nn
 
 #----------------------------------------------------------------------------------------------------
 # Initial data sizes
-#input_size = 131072  #Number of variables per input #using wavfile
-input_size = 65536  #Number of variables per input #using librosa
+input_size = 131072  #Number of variables per input #using wavfile
+#input_size = 65536  #Number of variables per input #using librosa
 hidden_size = 500   #Number of neurons
 num_classes = 8  #8 classes/labels
 num_epochs = 25 #Number of iterations
@@ -87,24 +87,24 @@ def class_loader(file_index, dataset):
 #----------------------------------------------------------------------------------------------------
 # Extract audio features with librosa
 
-def extract_audio(set):
-    data = np.zeros((len(set), input_size), dtype=np.float64)
+def extract_audio(dataset):
+    data = np.zeros((len(dataset), input_size+1), dtype=np.float64)
 
-    for i, subset in enumerate(set):
-        row = set.loc[i]
+    for i in range(0,len(dataset)):
+        row = dataset.loc[i]
         uuid4_name = str(row.loc['uuid4'])
         file_name = full_name(uuid4_name)
 
-        #fs, data = wavfile.read(file_name)
-        y, sr = librosa.load(file_name)
+        fs, y = wavfile.read('Medley-solos-DB_test-0_0aed2359-7d66-5da2-f041-8fb5d78b61c1.wav.wav')
+        #y, sr = librosa.load('Medley-solos-DB_test-0_0aed2359-7d66-5da2-f041-8fb5d78b61c1.wav.wav')
 
-        data[i,:] = y
+        data[i,0] = class_loader(i, dataset)[1]
+        data[i,1:input_size+1] = y
 
-        print("Extracted features audio track %i of %i." % (i + 1, len(list_of_audiofiles)))
+        if (i%100 == 0):
+            print("Extracted features audio track %i of %i." % (i + 1, len(dataset)))
 
     return data
-
-#print(extract_audio(train))
 #----------------------------------------------------------------------------------------------------
 #LSTM Model
 class Net(nn.Module):
@@ -130,8 +130,9 @@ optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=l
 for epoch in range(num_epochs):
     for i, data in enumerate(extract_audio(train)):
         model.zero_grad()
-        audios = data
-        labels = class_loader(i, train)[1]
+        
+        labels = data[:,0]
+        audios = data[:,1:input_size+1]
         audios = audios.view(batch_size, input_size).cuda()
         audios, labels = Variable(audios), Variable(labels.cuda())
 
@@ -150,10 +151,11 @@ for epoch in range(num_epochs):
 correct = 0
 total = 0
 for for i, data in enumerate(extract_audio(train)):
-    audios = data
-    audios = Variable(audios.view(batch_size, input_size)).cuda()
-    labels = class_loader(i, train)[1]
-    labels = Variable(labels.cuda())
+    labels = data[:,0]
+    audios = data[:,1:input_size+1]
+    audios = audios.view(batch_size, input_size).cuda()
+    audios, labels = Variable(audios), Variable(labels.cuda())
+    
     outputs = model(audios)
     _, predicted = torch.max(outputs.data, 1)
     total += labels.size(0)
@@ -170,10 +172,11 @@ print('Accuracy of the network on the 10000 test audio clips: %d %%' % (100 * co
 class_correct = list(0. for i in range(10))
 class_total = list(0. for i in range(10))
 for data in extract_audio(train):
-    audios = data
-    labels = class_loader(i, train)[1]
-    audios = Variable(audios.view(batch_size, input_size)).cuda()
-    labels = Variable(labels.cuda())
+    labels = data[:,0]
+    audios = data[:,1:input_size+1]
+    audios = audios.view(batch_size, input_size).cuda()
+    audios, labels = Variable(audios), Variable(labels.cuda())
+    
     outputs = model(images)
     _, predicted = torch.max(outputs.data, 1)
 
