@@ -88,7 +88,7 @@ def class_loader(file_index, dataset):
 # Extract audio features with librosa
 
 def extract_audio(set):
-    data = np.zeros((len(set), 1), dtype=np.float64)
+    data = np.zeros((len(set), input_size), dtype=np.float64)
 
     for i, subset in enumerate(set):
         row = set.loc[i]
@@ -98,7 +98,7 @@ def extract_audio(set):
         #fs, data = wavfile.read(file_name)
         y, sr = librosa.load(file_name)
 
-        data[i] = y
+        data[i,:] = y
 
         print("Extracted features audio track %i of %i." % (i + 1, len(list_of_audiofiles)))
 
