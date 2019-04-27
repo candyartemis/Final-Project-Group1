@@ -6,25 +6,27 @@ import librosa
 #import re
 from scipy.io import wavfile
 #import matplotlib.pyplot as plt
-#from torch.autograd import Variable
+from torch.autograd import Variable
 import librosa.display
-#import os, glob
+import os, glob
 
 import torch
 import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
 #import torch.nn.functional as F
 #import torch.optim as optim
-
-
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #----------------------------------------------------------------------------------------------------
 # Initial data sizes
 input_size = 131072  #Number of variables per input #using wavfile
 #input_size = 65536  #Number of variables per input #using librosa
+#input_size = 13  #Number of input @using mfcc
 hidden_size = 500   #Number of neurons
 num_classes = 8  #8 classes/labels
 num_epochs = 25 #Number of iterations
 batch_size = 100  #Number of inputs to ran through
 learning_rate = 0.001
+embed_size = 3
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -36,25 +38,27 @@ classes = ['clarinet', 'distorted electric guitar', 'female singer', 'flute', 'p
 #Spit data into test, train, validation sets
 print("Loading CSV...")
 Medley = pd.read_csv("Medley-solos-DB_metadata.csv")
-test = Medley.iloc[0:12236]
-test.index = range(len(test.index))
+#test = pd.read_csv("Medley_audio_test.csv")
+#train = pd.read_csv("Medley_audio_train.csv")
+#test = Medley.iloc[0:12236]
+#test.index = range(len(test.index))
 
 train = Medley.iloc[12236:18077]
 train.index = range(len(train.index))
 
-validation = Medley.iloc[18077:]
-validation.index = range(len(validation.index))
+#validation = Medley.iloc[18077:]
+#validation.index = range(len(validation.index))
 
 print("Number of audios=", Medley.shape[0], "  Number of classes=", len(Medley.instrument.unique()))
 print(Medley.instrument.unique())
 
 
-print("Test set size: ")
-print(len(test))
+#print("Test set size: ")
+#print(len(test))
 print("Train set size: ")
 print(len(train))
-print("Validation set size: ")
-print(len(validation))
+#print("Validation set size: ")
+#print(len(validation))
 
 #---------------------------------------------------------------------------------------------------
 #Get file uuid4
@@ -62,7 +66,6 @@ filenames = Medley.uuid4
 print(filenames.head())
 Medley['audio'] = ""
 Medley.head()
-
 
 #---------------------------------------------------------------------------------------------------
 #Load audio file linked to the uuid
@@ -75,6 +78,13 @@ def full_name(file):
     file_name = s.join(parts)
     return file_name
 
+def load_file(file):
+    file_name = full_name(file)
+    path = '/home/ubuntu/Machine-Learning/Medley-solos-DB/'
+    parts = [path, file_name]
+    s = ''
+    link = s.join(parts)
+    return link
 #----------------------------------------------------------------------------------------------------
 # extract class given a known index in csv file
 def class_loader(file_index, dataset):
@@ -84,119 +94,86 @@ def class_loader(file_index, dataset):
     instrument_id = str(row.loc['instrument_id'])
     return classes, instrument_id, uuid4_name
 
-#----------------------------------------------------------------------------------------------------
-# Extract audio features with librosa
+#---------------------------------------------------------------------------------------------------
+#Process Dataset
 
-def extract_audio(dataset):
-    data = np.zeros((len(dataset), input_size+1), dtype=np.float64)
+class MedleyDataset(Dataset):
+    def __init__(self, dataset_csv, transform=None):
+        self.dataset_frame = dataset_csv
+        self.transform = transform
 
-    for i in range(0,len(dataset)):
-        row = dataset.loc[i]
-        uuid4_name = str(row.loc['uuid4'])
-        file_name = full_name(uuid4_name)
+    def __len__(self):
+        return len(self.dataset_frame)
 
-        fs, y = wavfile.read('Medley-solos-DB_test-0_0aed2359-7d66-5da2-f041-8fb5d78b61c1.wav.wav')
-        #y, sr = librosa.load('Medley-solos-DB_test-0_0aed2359-7d66-5da2-f041-8fb5d78b61c1.wav.wav')
+    def __getitem__(self, index):
+        uuid4 = self.dataset_frame.iloc[index, 4]
+        instrument_list = self.dataset_frame.iloc[index, 2]
+        instrument_id = int(instrument_list)
+        link = load_file(uuid4)
+        fs, audio = wavfile.read(link)
+        #y, sr = librosa.load(link)
+        #mfcc = librosa.feature.mfcc(y=y, sr=sr, hop_length=512, n_mfcc=13)
+        #print(audio)
+        #audio = mfcc.T[0: 128, :]
+        audio = audio.astype('float')
 
-        data[i,0] = class_loader(i, dataset)[1]
-        data[i,1:input_size+1] = y
+        sample = {'audio': audio, 'label': instrument_id}
 
-        if (i%100 == 0):
-            print("Extracted features audio track %i of %i." % (i + 1, len(dataset)))
+        if self.transform:
+            sample = self.transform(sample)
 
-    return data
+        return sample
+
+audio_dataset_train = MedleyDataset(dataset_csv= train)
 #----------------------------------------------------------------------------------------------------
 #LSTM Model
+
 class Net(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
         super(Net, self).__init__()
-        self.fc1 = nn.LSTM(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, num_classes)
+        self.Linear = nn.Linear(input_size, hidden_size).cuda()
+        self.relu = nn.ReLU().cuda()
+        self.fc2 = nn.Linear(hidden_size, num_classes).cuda()
 
     def forward(self, x):
-        out = self.fc1(x)
+        print(x.shape)
+        out = self.Linear(x)
+        #print("Afterlstm")
+        #print(out.shape)
         out = self.relu(out)
-        out = self.fc2(out)
+        out = self.fc2(out.view(len(x), -1))
         return out
 
 #----------------------------------------------------------------------------------------------------
-#main
+#Train LSTM
+
 model = Net(input_size, hidden_size, num_classes)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
+train_loader = torch.utils.data.DataLoader(dataset = audio_dataset_train, batch_size = batch_size, shuffle = False)
 
-""""
+#print(train_loader)
+
 for epoch in range(num_epochs):
-    for i, data in enumerate(extract_audio(train)):
+    for i, data in enumerate(train_loader):
         model.zero_grad()
-        
-        labels = data[:,0]
-        audios = data[:,1:input_size+1]
-        audios = audios.view(batch_size, input_size).cuda()
-        audios, labels = Variable(audios), Variable(labels.cuda())
 
+        audios = data['audio']
+        labels = data['label']
+        print(i)
+
+        audios = audios.type(torch.FloatTensor)
+        audios = Variable(audios.cuda())
 
         output = model(audios)
 
-        loss = criterion(output, labels)
+        labels = labels.type(torch.LongTensor)
+        labels = Variable(labels.cuda())
+
+        loss = criterion(output, labels).cuda()
         loss.backward()
         optimizer.step()
 
-        if (i + 1) % 100 == 0:
+        if (i + 1) % 10 == 0:
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                   % (epoch + 1, num_epochs, i + 1, len(train) // batch_size, loss.data[0]))
-                  
-#----------------------------------------------------------------------------------------------------
-correct = 0
-total = 0
-for for i, data in enumerate(extract_audio(train)):
-    labels = data[:,0]
-    audios = data[:,1:input_size+1]
-    audios = audios.view(batch_size, input_size).cuda()
-    audios, labels = Variable(audios), Variable(labels.cuda())
-    
-    outputs = model(audios)
-    _, predicted = torch.max(outputs.data, 1)
-    total += labels.size(0)
-    correct += (predicted == labels).sum()
-    # print(total)
-    # print(correct)
-
-print('Accuracy of the network on the 10000 test audio clips: %d %%' % (100 * correct / total))
-# --------------------------------------------------------------------------------------------
-
-#_, predicted = torch.max(outputs.data, 1)
-#print('Predicted: ', ' '.join('%5s' % classes[predicted[j]] for j in range(4)))
-# --------------------------------------------------------------------------------------------
-class_correct = list(0. for i in range(10))
-class_total = list(0. for i in range(10))
-for data in extract_audio(train):
-    labels = data[:,0]
-    audios = data[:,1:input_size+1]
-    audios = audios.view(batch_size, input_size).cuda()
-    audios, labels = Variable(audios), Variable(labels.cuda())
-    
-    outputs = model(images)
-    _, predicted = torch.max(outputs.data, 1)
-
-    labels = labels.cpu().numpy()
-    c = (predicted.cpu().numpy() == labels)
-    for i in range(4):
-        label = labels[i]
-        class_correct[label] += c[i]
-        class_total[label] += 1
-
-# --------------------------------------------------------------------------------------------
-for i in range(10):
-    print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
-# --------------------------------------------------------------------------------------------
-torch.save(net.state_dict(), 'model.pkl')
-print("--- %s seconds ---" % (time.time() - start_time))
-                  
-                  
-                  
-                  
-                  
-                  
-                  """
