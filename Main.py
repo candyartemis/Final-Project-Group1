@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import pandas as pd
 import librosa
@@ -90,9 +88,9 @@ def class_loader(file_index, dataset):
 # Extract audio features with librosa
 
 def extract_audio(set):
-    data = np.zeros((len(set), input_size), dtype=np.float64)
+    data = np.zeros((len(set), 1), dtype=np.float64)
 
-    for i, file in enumerate(set):
+    for i, subset in enumerate(set):
         row = set.loc[i]
         uuid4_name = str(row.loc['uuid4'])
         file_name = full_name(uuid4_name)
@@ -100,12 +98,13 @@ def extract_audio(set):
         #fs, data = wavfile.read(file_name)
         y, sr = librosa.load(file_name)
 
-        data[i,:] = y
+        data[i] = y
 
         print("Extracted features audio track %i of %i." % (i + 1, len(list_of_audiofiles)))
 
     return data
-#print(data)
+
+#print(extract_audio(train))
 #----------------------------------------------------------------------------------------------------
 #LSTM Model
 class Net(nn.Module):
@@ -126,10 +125,6 @@ class Net(nn.Module):
 model = Net(input_size, hidden_size, num_classes)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
-
-
-
-
 
 """"
 for epoch in range(num_epochs):
@@ -202,4 +197,3 @@ print("--- %s seconds ---" % (time.time() - start_time))
                   
                   
                   """
-
