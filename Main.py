@@ -18,15 +18,14 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 start_time = time.time()
 #----------------------------------------------------------------------------------------------------
 # Initial data sizes
-input_size = 512       #Number of inputs (splited because of the LSTM model)
-hidden_size = 500      #Number of neurons
+input_size = 131072       #Number of inputs (splited because of the LSTM model)
+hidden_size1 = 500      #Number of neurons
+hidden_size2 = 30     #Number of neurons
 num_classes = 8        #8 classes/labels
-num_epochs = 1         #Number of epochs
-batch_size = 100       #Number of inputs to ran through
+num_epochs = 30     #Number of epochs
+batch_size = 100       #Number of audio clips to ran through 1 iteration
 learning_rate = 0.001
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
+confusion_m = np.zeros((8,8))
 #----------------------------------------------------------------------------------------------------
 #Classes
 
@@ -93,7 +92,7 @@ class MedleyDataset(Dataset):
         instrument_list = self.dataset_frame.iloc[index, 2]
         instrument_id = int(instrument_list)
         link = load_file(uuid4)
-        
+
         fs, audio = wavfile.read(link)
         audio = audio.astype('float')
 
@@ -111,40 +110,42 @@ audio_dataset_test = MedleyDataset(dataset_csv= test)
 #LSTM Model
 
 class Net(nn.Module):
-    def __init__(self, input_size, hidden_size, num_classes):
+    def __init__(self, input_size, hidden_size1, hidden_size2, num_classes):
         super(Net, self).__init__()
-        self.LSTM = nn.LSTM(input_size, hidden_size, batch_first = True).cuda()
-        self.lstm2tag = nn.Linear(hidden_size, num_classes).cuda()
+        self.LSTM1 = nn.LSTM(input_size, hidden_size1, batch_first = True, num_layers = 2, dropout = 0.1).cuda()
+        self.LSTM2 = nn.LSTM(hidden_size1, hidden_size2, batch_first = True).cuda()
+        self.lstm2tag = nn.Linear(hidden_size2, num_classes).cuda()
 
     def forward(self, x):
         #print(x.shape)
         s = x.shape[0]
         #print(s)
-        x = x.reshape(s, 256, 512)
-        out, states = self.LSTM(x)
+        x = x.reshape(s, 1, input_size)
+        out, states = self.LSTM1(x)
+        out, states = self.LSTM2(out)
         #print("Afterlstm")
         #print(out.shape)
-        #out = out.reshape(batch_size, 256 * hidden_size)
-        out = out[:,1,:]
+        out = out[:,0,:]
         out = self.lstm2tag(out)
-        #print("Afterfinal")
-        #print(out.shape)
         return out
 
 #----------------------------------------------------------------------------------------------------
 #Train LSTM
 
-model = Net(input_size, hidden_size, num_classes)
+model = Net(input_size, hidden_size1, hidden_size2, num_classes)
 criterion = nn.CrossEntropyLoss()
 
-optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
-train_loader = torch.utils.data.DataLoader(dataset = audio_dataset_train, batch_size = batch_size, shuffle = False)
+#optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
+#optimizer = torch.optim.SGD(params = model.parameters(), lr=learning_rate, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+optimizer = torch.optim.Adam(params = model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+
+train_loader = torch.utils.data.DataLoader(dataset = audio_dataset_train, batch_size = batch_size, shuffle = True)
 validation_loader = torch.utils.data.DataLoader(dataset = audio_dataset_validation, batch_size = batch_size, shuffle = False)
 test_loader = torch.utils.data.DataLoader(dataset = audio_dataset_test, batch_size = batch_size, shuffle = False)
 
 
 for epoch in range(num_epochs):
-    for i, data in enumerate(train_loader):
+    for i, data in enumerate(test_loader):
 
         model.zero_grad()
 
@@ -162,13 +163,14 @@ for epoch in range(num_epochs):
         loss = criterion(output, labels).cuda()
         loss.backward()
         optimizer.step()
+        optimizer.zero_grad()
 
         if (i + 1) % 10 == 0:
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
-                  % (epoch + 1, num_epochs, i + 1, len(train) // batch_size, loss.data[0]))
+                  % (epoch + 1, num_epochs, i + 1, len(test) // batch_size, loss.data[0]))
 
 #----------------------------------------------------------------------------------------------------
-#Test accuracy on validation set 
+#Test accuracy on validation set
 
 correct = 0
 total = 0
@@ -194,6 +196,16 @@ for i, data in enumerate(validation_loader):
     # print(correct)
 
 
+    #confusion matrix
+    #from sklearn.metrics import confusion_matrix
+
+    #results = confusion_matrix(labels, predicted)
+
+    #confusion_m = confusion_m + results
+
+
+
+print(confusion_m)
 print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
 # --------------------------------------------------------------------------------------------
 #Test accuracy of each class on Validation set
@@ -217,7 +229,8 @@ for data in validation_loader:
 
     labels = labels.cpu().numpy()
     c = (predicted.cpu().numpy() == labels)
-    for i in range(4):
+    s = labels.shape[0]
+    for i in range(s):
         label = labels[i]
         class_correct[label] += c[i]
         class_total[label] += 1
@@ -233,3 +246,5 @@ for i in range(8):
 torch.save(model.state_dict(), 'model.pkl')
 print("--- %s seconds ---" % (time.time() - start_time))
                   
+                  
+
