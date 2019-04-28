@@ -6,7 +6,7 @@ LTSM model is selected for the audio tagging since it is a time series problem. 
 
 # Twofold Analysis
 * The main.py uses time domain data extracted from wavfile.
-* The main(frequncy).py uses time domain data extracted from wavfile.(The audio data .py generates the .npy (numpy ndarray) music feature data extracted with librosa we are going to load in the main(frequency).py.) 
+* The main(frequncy).py uses time domain data extracted from wavfile.(The music_feature_loader.py generates the .npy (numpy ndarray) music feature data extracted with librosa we are going to load in the main(frequency).py.) 
 
 ### Prerequisites
 
