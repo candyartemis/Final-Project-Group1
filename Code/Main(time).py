@@ -77,7 +77,6 @@ def load_file(file):
 
 #%%
 
-#%%
 #Process Dataset
 
 class MedleyDataset(Dataset):
