@@ -230,8 +230,8 @@ for epoch in range(num_epochs):
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                   % (epoch + 1, num_epochs, i + 1, len(train) // batch_size, loss.data[0]))
 
-epochs = np.append(epochs, epoch)
-loss_index = np.append(loss_index, loss.item())
+    epochs = np.append(epochs, epoch)
+    loss_index = np.append(loss_index, loss.item())
 
 end_time = time.time()
 elapsed_time = end_time - start_time
