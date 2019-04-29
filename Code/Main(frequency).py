@@ -1,19 +1,19 @@
-#The commented part is the same as the music_feature_loader
-#Need to run music_feature_loader first, and have the 3 .npy file, to run this code.
-
 import numpy as np
 import pandas as pd
 from torch.autograd import Variable
 import time
-#import librosa
+import librosa
 
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-start_time = time.time()
 # ----------------------------------------------------------------------------------------------------
 # Initial data sizes
 input_size = 63  # Number of inputs (splited because of the LSTM model) using Librosa
@@ -80,7 +80,7 @@ def find_file(file):
 
 def get_music_features(dataset):
     timeseries_length = 3
-    audio = np.zeros((len(dataset), timeseries_length, 14), dtype=np.float64)
+    audio = np.zeros((len(dataset), timeseries_length, 21), dtype=np.float64)
 
     for i in range(len(dataset)):
         row = dataset.loc[i]
@@ -114,11 +114,8 @@ np.save('test_audio_data.npy', test_audio_data)
 # ---------------------------------------------------------------------------------------------------
 # load npy music feature matrix data
 train_audio_data = np.load('train_audio_data.npy')
-print(train_audio_data.shape)
 validation_audio_data = np.load('validation_audio_data.npy')
-
-
-# test_audio_data = np.load('test_audio_data.npy')
+test_audio_data = np.load('test_audio_data.npy')
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -195,7 +192,13 @@ optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, betas=
 
 train_loader = torch.utils.data.DataLoader(dataset=audio_dataset_train, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(dataset=audio_dataset_validation, batch_size=batch_size, shuffle=True)
-# test_loader = torch.utils.data.DataLoader(dataset = dataset=audio_dataset_test, batch_size = batch_size, shuffle = True)
+test_loader = torch.utils.data.DataLoader(dataset = audio_dataset_test, batch_size = batch_size, shuffle = True)
+
+
+start_time = time.time()
+
+epochs = np.array([])
+loss_index = np.array([])
 
 for epoch in range(num_epochs):
     for i, data in enumerate(train_loader):
@@ -218,9 +221,28 @@ for epoch in range(num_epochs):
         optimizer.step()
         optimizer.zero_grad()
 
+
         if (i + 1) % 10 == 0:
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                   % (epoch + 1, num_epochs, i + 1, len(train) // batch_size, loss.data[0]))
+
+epochs = np.append(epochs, epoch)
+loss_index = np.append(loss_index, loss.item())
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+print("Elapsed time:", elapsed_time)
+
+
+
+fig, ax = plt.subplots()
+ax.plot(epochs, loss_index)
+
+ax.set(xlabel='Epoch', ylabel='Performance Index', title='Performance Index Over Time')
+ax.grid()
+fig.savefig("test.png")
+plt.show()
+
 
 # ----------------------------------------------------------------------------------------------------
 # Test accuracy on validation set
@@ -242,19 +264,28 @@ for i, data in enumerate(validation_loader):
     labels = Variable(labels.cuda())
 
     _, predicted = torch.max(outputs.data, 1)
+    #print(predicted.shape)
+    #print(labels.shape)
 
     total += labels.size(0)
     correct += (predicted == labels).sum()
-    # print(total)
-    # print(correct)
+    #print(total)
+    #print(correct)
 
-    # confusion matrix
-    # from sklearn.metrics import confusion_matrix
+    leng = predicted.shape[0]
 
-    # results = confusion_matrix(labels, predicted)
+    a = predicted.cpu().detach().numpy()
+    b = labels.cpu().detach().numpy()
 
-    # confusion_m = confusion_m + results
 
+    for j in range(leng):
+        k1 = a[j]
+        k2 = b[j]
+        confusion_m[k1,k2] += 1
+
+#confusion matrix
+confusion_m.astype(int)
+ax = sns.heatmap(confusion_m, annot=True)
 print(confusion_m)
 print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
 # --------------------------------------------------------------------------------------------
@@ -293,5 +324,4 @@ for i in range(8):
     else:
         print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
 # --------------------------------------------------------------------------------------------
-torch.save(model.state_dict(), 'model.pkl')
-print("--- %s seconds ---" % (time.time() - start_time))
+torch.save(model.state_dict(), 'model_time.pkl')
