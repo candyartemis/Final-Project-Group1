@@ -1,11 +1,4 @@
-# This file extracts the music feature using librosa, and save it as xxxxx.npy numpy ndarray 
-
-
-import numpy as np
-import pandas as pd
-import librosa
-
-
+#This file extracts the music feature (mfcc, spectral centroid, spectral contrast) using librosa, and save it as.npy numpy ndarray 
 #---------------------------------------------------------------------------------------------------
 #Load audio file linked to the uuid
 def full_name(file):
@@ -27,11 +20,12 @@ def find_file(file):
 
 #---------------------------------------------------------------------------------------------------
 #Generating music data matrix in frequency domain using librosa
+
 def get_music_features(dataset):
     timeseries_length = 3
     audio = np.zeros((len(dataset), timeseries_length, 14), dtype=np.float64)
 
-    for i in range(0,len(dataset)):
+    for i in range(len(dataset)):
         row = dataset.loc[i]
         uuid4_name = str(row.loc['uuid4'])
         link = find_file(uuid4_name)
@@ -40,12 +34,15 @@ def get_music_features(dataset):
 
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
         spectral_center = librosa.feature.spectral_centroid(y=y, sr=sr)
+        spectral_contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
 
         audio[i, :, 0:13] = mfcc.T[0:timeseries_length, :]
         audio[i, :, 13:14] = spectral_center.T[0:timeseries_length, :]
+        audio[i, :, 14:21] = spectral_contrast.T[0:timeseries_length, :]
+        
 
         if ((i + 1) % 100 == 0):
-            print("Extracted features audio track %i of %i." % (i + 1, len(dataset)))
+            print("Extracted features audio clip %i of %i." % (i + 1, len(dataset)))
 
     return audio
 
