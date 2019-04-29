@@ -23,9 +23,9 @@ input_size = 63  # Number of inputs (splited because of the LSTM model) using Li
 hidden_size1 = 500  # Number of neurons
 hidden_size2 = 30  # Number of neurons
 num_classes = 8  # 8 classes/labels
-num_epochs = 300  # Number of epochs
-batch_size = 100  # Number of audio clips to ran through 1 iteration
-learning_rate = 0.001
+num_epochs = 50  # Number of epochs
+batch_size = 50  # Number of audio clips to ran through 1 iteration
+learning_rate = 0.0001
 confusion_m = np.zeros((8, 8))
 # ----------------------------------------------------------------------------------------------------
 # Classes
