@@ -38,7 +38,7 @@ sudo apt_get install libav-tools
 
 ## Results
 * Time Domain Analysis: Overall accuracy on validation set: 24%.
-* Frequency Domain Analysis: Overall accuracy on validation set: XX%.
+* Frequency Domain Analysis: Overall accuracy on validation set: 79%, Overall accuracy on test set: 50%.
 
 
 ## Authors
