@@ -1,1 +1,1 @@
-Folder containgint my code
+The preprocessing code is the "first draft" of code I wrote to extract, transform, and load the audio files. Although we didn't use the portion saving data to csv files because of technical issues, we used this code as a base for loading audio data and converting the files into torch dataset for training and test. 
