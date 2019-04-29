@@ -103,9 +103,7 @@ class MedleyDataset(Dataset):
             sample = self.transform(sample)
 
         return sample
-#%%
-transform = transforms.Compose([transforms.ToTensor(), 
-                                transforms.Normalize((0.5,), (0.5,))])
+
 #%%
                                 
 audio_dataset_train = MedleyDataset(dataset_csv= train)
