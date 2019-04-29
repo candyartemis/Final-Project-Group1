@@ -23,7 +23,7 @@ def find_file(file):
 
 def get_music_features(dataset):
     timeseries_length = 3
-    audio = np.zeros((len(dataset), timeseries_length, 14), dtype=np.float64)
+    audio = np.zeros((len(dataset), timeseries_length, 21), dtype=np.float64)
 
     for i in range(len(dataset)):
         row = dataset.loc[i]
