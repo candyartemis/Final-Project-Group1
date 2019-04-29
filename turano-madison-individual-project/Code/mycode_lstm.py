@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-I wrote this code as a first draft for processing data and training our model.
-
-"""
 #%%
 import torch
 import torchvision
