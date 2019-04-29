@@ -23,7 +23,7 @@ num_classes = 8  # 8 classes/labels
 num_epochs = 300  # Number of epochs
 batch_size = 100  # Number of audio clips to ran through 1 iteration
 learning_rate = 0.001
-confusion_m = np.zeros((8, 8))
+#confusion_m = np.zeros((8, 8))
 # ----------------------------------------------------------------------------------------------------
 # Classes
 
@@ -234,17 +234,8 @@ for i, data in enumerate(validation_loader):
 
     total += labels.size(0)
     correct += (predicted == labels).sum()
-    # print(total)
-    # print(correct)
 
-    # confusion matrix
-    # from sklearn.metrics import confusion_matrix
-
-    # results = confusion_matrix(labels, predicted)
-
-    # confusion_m = confusion_m + results
-
-print(confusion_m)
+#print(confusion_m)
 print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
 # --------------------------------------------------------------------------------------------
 # Test accuracy of each class on Validation set
