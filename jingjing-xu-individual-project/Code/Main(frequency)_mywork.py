@@ -1,19 +1,25 @@
 #The commented part is the same as the music_feature_loader
 #Need to run music_feature_loader first, and have the 3 .npy file, to run this code.
 
+
+
+
 import numpy as np
 import pandas as pd
 from torch.autograd import Variable
 import time
-#import librosa
+import librosa
 
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-start_time = time.time()
 # ----------------------------------------------------------------------------------------------------
 # Initial data sizes
 input_size = 63  # Number of inputs (splited because of the LSTM model) using Librosa
@@ -23,7 +29,7 @@ num_classes = 8  # 8 classes/labels
 num_epochs = 300  # Number of epochs
 batch_size = 100  # Number of audio clips to ran through 1 iteration
 learning_rate = 0.001
-#confusion_m = np.zeros((8, 8))
+confusion_m = np.zeros((8, 8))
 # ----------------------------------------------------------------------------------------------------
 # Classes
 
@@ -66,6 +72,7 @@ def full_name(file):
     s = ''
     file_name = s.join(parts)
     return file_name
+
 def find_file(file):
     file_name = full_name(file)
     path = '/home/ubuntu/Machine-Learning/Medley-solos-DB/'
@@ -73,29 +80,39 @@ def find_file(file):
     s = ''
     link = s.join(parts)
     return link
+
 #---------------------------------------------------------------------------------------------------
 #Generating music data ndarray in frequency domain using librosa
+
 def get_music_features(dataset):
     timeseries_length = 3
-    audio = np.zeros((len(dataset), timeseries_length, 14), dtype=np.float64)
+    audio = np.zeros((len(dataset), timeseries_length, 21), dtype=np.float64)
+
     for i in range(len(dataset)):
         row = dataset.loc[i]
         uuid4_name = str(row.loc['uuid4'])
         link = find_file(uuid4_name)
+
         y, sr = librosa.load(link)
+
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
         spectral_center = librosa.feature.spectral_centroid(y=y, sr=sr)
         spectral_contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
+
         audio[i, :, 0:13] = mfcc.T[0:timeseries_length, :]
         audio[i, :, 13:14] = spectral_center.T[0:timeseries_length, :]
         audio[i, :, 14:21] = spectral_contrast.T[0:timeseries_length, :]
         
+
         if ((i + 1) % 100 == 0):
             print("Extracted features audio clip %i of %i." % (i + 1, len(dataset)))
+
     return audio
+
 train_audio_data = get_music_features(train)
 validation_audio_data = get_music_features(validation)
 test_audio_data = get_music_features(test)
+
 np.save('train_audio_data.npy', train_audio_data)
 np.save('validation_audio_data.npy', validation_audio_data)
 np.save('test_audio_data.npy', test_audio_data)
@@ -103,11 +120,8 @@ np.save('test_audio_data.npy', test_audio_data)
 # ---------------------------------------------------------------------------------------------------
 # load npy music feature matrix data
 train_audio_data = np.load('train_audio_data.npy')
-print(train_audio_data.shape)
 validation_audio_data = np.load('validation_audio_data.npy')
-
-
-# test_audio_data = np.load('test_audio_data.npy')
+test_audio_data = np.load('test_audio_data.npy')
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -157,7 +171,7 @@ class Net(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, num_classes):
         super(Net, self).__init__()
         self.LSTM1 = nn.LSTM(input_size, hidden_size1, batch_first=True, num_layers=2, dropout=0.1).cuda()
-        # self.LSTM2 = nn.LSTM(hidden_size1, hidden_size2, batch_first = True).cuda()
+        #self.LSTM2 = nn.LSTM(hidden_size1, hidden_size2, batch_first = True).cuda()
         self.lstm2tag = nn.Linear(hidden_size1, num_classes).cuda()
 
     def forward(self, x):
@@ -165,7 +179,7 @@ class Net(nn.Module):
         s = x.shape[0]
         x = x.reshape(s, 1, input_size)
         out, states = self.LSTM1(x)
-        # out, states = self.LSTM2(out)
+        #out, states = self.LSTM2(out)
         out = out[:, 0, :]
         out = self.lstm2tag(out)
         return out
@@ -177,14 +191,15 @@ class Net(nn.Module):
 model = Net(input_size, hidden_size1, hidden_size2, num_classes)
 criterion = nn.CrossEntropyLoss()
 
-# optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
-# optimizer = torch.optim.SGD(params = model.parameters(), lr=learning_rate, momentum=0, dampening=0, weight_decay=0, nesterov=False)
-optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0,
-                             amsgrad=False)
+
+#optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
+#optimizer = torch.optim.SGD(params = model.parameters(), lr=learning_rate, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0,amsgrad=False)
 
 train_loader = torch.utils.data.DataLoader(dataset=audio_dataset_train, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(dataset=audio_dataset_validation, batch_size=batch_size, shuffle=True)
-# test_loader = torch.utils.data.DataLoader(dataset = dataset=audio_dataset_test, batch_size = batch_size, shuffle = True)
+test_loader = torch.utils.data.DataLoader(dataset = audio_dataset_test, batch_size = batch_size, shuffle = True)
+
 
 for epoch in range(num_epochs):
     for i, data in enumerate(train_loader):
@@ -207,9 +222,21 @@ for epoch in range(num_epochs):
         optimizer.step()
         optimizer.zero_grad()
 
+
         if (i + 1) % 10 == 0:
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                   % (epoch + 1, num_epochs, i + 1, len(train) // batch_size, loss.data[0]))
+
+
+
+fig, ax = plt.subplots()
+ax.plot(epochs, loss_index)
+
+ax.set(xlabel='Epoch', ylabel='Performance Index', title='Performance Index Over Time')
+ax.grid()
+fig.savefig("test.png")
+plt.show()
+
 
 # ----------------------------------------------------------------------------------------------------
 # Test accuracy on validation set
@@ -235,7 +262,22 @@ for i, data in enumerate(validation_loader):
     total += labels.size(0)
     correct += (predicted == labels).sum()
 
-#print(confusion_m)
+
+    leng = predicted.shape[0]
+
+    a = predicted.cpu().detach().numpy()
+    b = labels.cpu().detach().numpy()
+
+
+    for j in range(leng):
+        k1 = a[j]
+        k2 = b[j]
+        confusion_m[k1,k2] += 1
+
+#confusion matrix
+confusion_m.astype(int)
+ax = sns.heatmap(confusion_m, annot=True)
+print(confusion_m)
 print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
 # --------------------------------------------------------------------------------------------
 # Test accuracy of each class on Validation set
@@ -273,5 +315,83 @@ for i in range(8):
     else:
         print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
 # --------------------------------------------------------------------------------------------
-torch.save(model.state_dict(), 'model.pkl')
-print("--- %s seconds ---" % (time.time() - start_time))
+torch.save(model.state_dict(), 'model_time.pkl')
+
+# ----------------------------------------------------------------------------------------------------
+# Test accuracy on test set
+
+correct = 0
+total = 0
+
+for i, data in enumerate(test_loader):
+
+    audios = data['audio']
+    labels = data['label']
+
+    audios = audios.type(torch.FloatTensor)
+    audios = Variable(audios.cuda())
+
+    outputs = model(audios)
+
+    labels = labels.type(torch.LongTensor)
+    labels = Variable(labels.cuda())
+
+    _, predicted = torch.max(outputs.data, 1)
+
+    total += labels.size(0)
+    correct += (predicted == labels).sum()
+
+
+    leng = predicted.shape[0]
+
+    a = predicted.cpu().detach().numpy()
+    b = labels.cpu().detach().numpy()
+
+
+    for j in range(leng):
+        k1 = a[j]
+        k2 = b[j]
+        confusion_m[k1,k2] += 1
+
+#confusion matrix
+confusion_m.astype(int)
+ax = sns.heatmap(confusion_m, annot=True)
+print(confusion_m)
+print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
+# --------------------------------------------------------------------------------------------
+# Test accuracy of each class on test set
+
+class_correct = list(0. for i in range(8))
+class_total = list(0. for i in range(8))
+
+for data in test_loader:
+    audios = data['audio']
+    labels = data['label']
+
+    audios = audios.type(torch.FloatTensor)
+    audios = Variable(audios.cuda())
+
+    outputs = model(audios)
+
+    labels = labels.type(torch.LongTensor)
+    labels = Variable(labels.cuda())
+
+    _, predicted = torch.max(outputs.data, 1)
+
+    labels = labels.cpu().numpy()
+    c = (predicted.cpu().numpy() == labels)
+    s = labels.shape[0]
+    for i in range(s):
+        label = labels[i]
+        class_correct[label] += c[i]
+        class_total[label] += 1
+
+# --------------------------------------------------------------------------------------------
+
+for i in range(8):
+    if (class_total[i] == 0):
+        print('Accuracy of %5s : %2d %%' % (classes[i], 0))
+    else:
+        print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
+# --------------------------------------------------------------------------------------------
+torch.save(model.state_dict(), 'model_time.pkl')
