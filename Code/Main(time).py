@@ -197,7 +197,7 @@ plt.figure(figsize = (12,8))
 plt.plot(epochs, loss_index, 'r')
 plt.xlabel("Epoch", fontsize = 14)
 plt.ylabel("Performance Index", fontsize = 14)
-plt.title("Performance Index Over Time", fontsize = 20)
+plt.title("Performance Index Over Time for Training Set", fontsize = 20)
 plt.show()
 
 #%%
@@ -206,7 +206,10 @@ plt.show()
 correct = 0
 total = 0
 
-for i, data in enumerate(validation_loader):
+epochs_train = np.array([])
+loss_index_train = np.array([])
+
+for i, data in enumerate(train_loader):
     audios = data['audio']
     labels = data['label']
 
@@ -226,6 +229,8 @@ for i, data in enumerate(validation_loader):
         if predicted[j] == labels[j]: correct += 1
     # print(total)
     # print(correct)
+    epochs = np.append(epochs_train, epoch)
+    loss_index = np.append(loss_index_train, loss.item())
 
 
 #Confusion matrix
@@ -234,6 +239,14 @@ confusion_m = confusion_m + results
 
 print(confusion_m)
 print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
+
+#%%
+plt.figure(figsize = (12,8))
+plt.plot(epochs_test, loss_index_test, 'r')
+plt.xlabel("Epoch", fontsize = 14)
+plt.ylabel("Performance Index", fontsize = 14)
+plt.title("Performance Index Over Time for Test Set", fontsize = 20)
+plt.show()
 
 #%%
 #Test accuracy of each class on Validation set
