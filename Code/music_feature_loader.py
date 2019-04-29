@@ -19,7 +19,7 @@ def find_file(file):
     return link
 
 #---------------------------------------------------------------------------------------------------
-#Generating music data matrix in frequency domain using librosa
+#Generating music data ndarray in frequency domain using librosa
 
 def get_music_features(dataset):
     timeseries_length = 3
