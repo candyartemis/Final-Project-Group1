@@ -142,6 +142,7 @@ model = Net(input_size, hidden_size1, hidden_size2, num_classes)
 
 #%%
 criterion = nn.CrossEntropyLoss()
+#criterion = nn.NLLLoss()
 
 #optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
 #optimizer = torch.optim.SGD(params = model.parameters(), lr=learning_rate, momentum=0, dampening=0, weight_decay=0, nesterov=False)
