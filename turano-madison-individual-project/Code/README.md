@@ -1,1 +1,3 @@
 The preprocessing code is the "first draft" of code I wrote to extract, transform, and load the audio files. Although we didn't use the portion saving data to csv files because of technical issues, we used this code as a base for loading audio data and converting the files into torch dataset for training and test. 
+
+The LSTM file is code I wrote as a first draft for loading data and training the LSTM model. I wrote code for transforming our data into torch dataset so we could use torch Dataset and torch Downloader functions, which we later used as a basis for our final torch dataset class code. I also wrote the first draft of our LSTM model, which we used when adjusting parameters and number of layers in our algorithm.
