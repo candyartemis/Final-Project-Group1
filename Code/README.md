@@ -2,11 +2,11 @@
 
 We are using the [Medley-solos](https://zenodo.org/record/2582103#.XMOHKi2ZNE5) dataset for musical instrument recognision. Each audio clip in training set and test set is 3-second long, and contains a single instrument sound. There are 8 classes of instruments in total: clarinet, distorted electric guitar, female singer, flute, piano, tenor saxophone, trumpet, and violin.
 
-LTSM model is selected for the audio tagging since it is a time series problem. We extract the time domain data from the audio clips with wavfile, and time series data (MFCC and spectral centroid) with librosa, and write the code using Pytorch framework.
+LTSM model is selected for the audio tagging since it is a time series problem. We extract the time domain data from the audio clips with wavfile, and time series data (MFCC, spectral centroid and spectral contrast) with librosa, and write the code using Pytorch framework.
 
 # Twofold Analysis
-* main.py uses time domain data extracted from wavfile.
-* main(frequency).py uses time domain data extracted from librosa.
+* Main(time).py uses time domain data extracted from wavfile.
+* Main(frequency).py uses time domain data extracted from librosa.
 * music_feature_loader.py needs to run first to created the 3 .npy files that will be used in main(frequency).py
 
 ### Prerequisites
@@ -27,6 +27,7 @@ sudo apt_get install libav-tools
 * Plain music data from time domain (generated with wavfile)
 * MFCC
 * Spectral centroid
+* Spectral contrast
 
 ## Built With
 
