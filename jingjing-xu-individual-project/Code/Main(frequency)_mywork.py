@@ -48,9 +48,6 @@ validation.index = range(len(validation.index))
 test = Medley.iloc[0:12236]
 test.index = range(len(test.index))
 
-print("Number of audios=", Medley.shape[0], "  Number of classes=", len(Medley.instrument.unique()))
-print(Medley.instrument.unique())
-
 print("Train set size: ")
 print(len(train))
 print("Validation set size: ")
@@ -65,11 +62,7 @@ def full_name(file):
     correspding_row = Medley.loc[Medley['uuid4'] == file].iloc[0]
     subset = str(correspding_row.loc['subset'])
     instrument_id = str(correspding_row.loc['instrument_id'])
-    parts = ['Medley-solos-DB_', str(subset), '-', str(instrument_id), '_', file, '.wav.wav']
-    s = ''
-    file_name = s.join(parts)
-    return file_name
-
+    
 def find_file(file):
     file_name = full_name(file)
     path = '/home/ubuntu/Machine-Learning/Medley-solos-DB/'
