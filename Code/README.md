@@ -5,8 +5,9 @@ We are using the [Medley-solos](https://zenodo.org/record/2582103#.XMOHKi2ZNE5) 
 LTSM model is selected for the audio tagging since it is a time series problem. We extract the time domain data from the audio clips with wavfile, and time series data (MFCC, spectral centroid and spectral contrast) with librosa, and write the code using Pytorch framework.
 
 # Twofold Analysis
-* music_feature_loader.py needs to run first to created the 3 .npy files that will be used in main(frequency).py
+
 * Main(time).py uses time domain data extracted from wavfile.
+* music_feature_loader.py needs to run first to created the 3 .npy files that will be used in main(frequency).py
 * Main(frequency).py uses time domain data extracted from librosa.
 
 ### Prerequisites
@@ -34,6 +35,10 @@ sudo apt_get install libav-tools
 * [Pytorch](https://pytorch.org) - The framework used
 * [numpy](https://maven.apache.org/) - Dependency used
 * [Librosa](https://www.numpy.org) - Used to extract features
+
+## Results
+* Time Domain Analysis: Overall accuracy on validation set: 24%.
+* Frequency Domain Analysis: Overall accuracy on validation set: XX%.
 
 
 ## Authors
