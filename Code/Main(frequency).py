@@ -1,3 +1,7 @@
+#The commented part is the same as the music_feature_loader
+#Need to run music_feature_loader first, and have the 3 .npy file, to run this code.
+
+
 import numpy as np
 import pandas as pd
 from torch.autograd import Variable
