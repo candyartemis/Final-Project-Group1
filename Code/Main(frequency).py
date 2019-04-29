@@ -165,7 +165,7 @@ class Net(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, num_classes):
         super(Net, self).__init__()
         self.LSTM1 = nn.LSTM(input_size, hidden_size1, batch_first=True, num_layers=2, dropout=0.1).cuda()
-        # self.LSTM2 = nn.LSTM(hidden_size1, hidden_size2, batch_first = True).cuda()
+        #self.LSTM2 = nn.LSTM(hidden_size1, hidden_size2, batch_first = True).cuda()
         self.lstm2tag = nn.Linear(hidden_size1, num_classes).cuda()
 
     def forward(self, x):
@@ -173,7 +173,7 @@ class Net(nn.Module):
         s = x.shape[0]
         x = x.reshape(s, 1, input_size)
         out, states = self.LSTM1(x)
-        # out, states = self.LSTM2(out)
+        #out, states = self.LSTM2(out)
         out = out[:, 0, :]
         out = self.lstm2tag(out)
         return out
@@ -185,10 +185,10 @@ class Net(nn.Module):
 model = Net(input_size, hidden_size1, hidden_size2, num_classes)
 criterion = nn.CrossEntropyLoss()
 
-# optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
-# optimizer = torch.optim.SGD(params = model.parameters(), lr=learning_rate, momentum=0, dampening=0, weight_decay=0, nesterov=False)
-optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0,
-                             amsgrad=False)
+
+#optimizer = torch.optim.Adadelta(model.parameters(), rho = 0.8, eps = 1e-6, lr=learning_rate)
+#optimizer = torch.optim.SGD(params = model.parameters(), lr=learning_rate, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0,amsgrad=False)
 
 train_loader = torch.utils.data.DataLoader(dataset=audio_dataset_train, batch_size=batch_size, shuffle=True)
 validation_loader = torch.utils.data.DataLoader(dataset=audio_dataset_validation, batch_size=batch_size, shuffle=True)
@@ -264,13 +264,10 @@ for i, data in enumerate(validation_loader):
     labels = Variable(labels.cuda())
 
     _, predicted = torch.max(outputs.data, 1)
-    #print(predicted.shape)
-    #print(labels.shape)
 
     total += labels.size(0)
     correct += (predicted == labels).sum()
-    #print(total)
-    #print(correct)
+
 
     leng = predicted.shape[0]
 
@@ -295,6 +292,85 @@ class_correct = list(0. for i in range(8))
 class_total = list(0. for i in range(8))
 
 for data in validation_loader:
+    audios = data['audio']
+    labels = data['label']
+
+    audios = audios.type(torch.FloatTensor)
+    audios = Variable(audios.cuda())
+
+    outputs = model(audios)
+
+    labels = labels.type(torch.LongTensor)
+    labels = Variable(labels.cuda())
+
+    _, predicted = torch.max(outputs.data, 1)
+
+    labels = labels.cpu().numpy()
+    c = (predicted.cpu().numpy() == labels)
+    s = labels.shape[0]
+    for i in range(s):
+        label = labels[i]
+        class_correct[label] += c[i]
+        class_total[label] += 1
+
+# --------------------------------------------------------------------------------------------
+
+for i in range(8):
+    if (class_total[i] == 0):
+        print('Accuracy of %5s : %2d %%' % (classes[i], 0))
+    else:
+        print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
+# --------------------------------------------------------------------------------------------
+torch.save(model.state_dict(), 'model_time.pkl')
+
+# ----------------------------------------------------------------------------------------------------
+# Test accuracy on test set
+
+correct = 0
+total = 0
+
+for i, data in enumerate(test_loader):
+
+    audios = data['audio']
+    labels = data['label']
+
+    audios = audios.type(torch.FloatTensor)
+    audios = Variable(audios.cuda())
+
+    outputs = model(audios)
+
+    labels = labels.type(torch.LongTensor)
+    labels = Variable(labels.cuda())
+
+    _, predicted = torch.max(outputs.data, 1)
+
+    total += labels.size(0)
+    correct += (predicted == labels).sum()
+
+
+    leng = predicted.shape[0]
+
+    a = predicted.cpu().detach().numpy()
+    b = labels.cpu().detach().numpy()
+
+
+    for j in range(leng):
+        k1 = a[j]
+        k2 = b[j]
+        confusion_m[k1,k2] += 1
+
+#confusion matrix
+confusion_m.astype(int)
+ax = sns.heatmap(confusion_m, annot=True)
+print(confusion_m)
+print('Accuracy of the network on the 3494 validation audio clips: %d %%' % (100 * correct / total))
+# --------------------------------------------------------------------------------------------
+# Test accuracy of each class on test set
+
+class_correct = list(0. for i in range(8))
+class_total = list(0. for i in range(8))
+
+for data in test_loader:
     audios = data['audio']
     labels = data['label']
 
