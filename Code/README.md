@@ -24,6 +24,12 @@ note that if you install via pip on a ubuntu based system, libav-tools is also n
 ```
 sudo apt_get install libav-tools
 ```
+To visualize test results, install seaborn
+
+```
+pip install seaborn
+```
+
 ## Uses
 * Plain music data from time domain (generated with wavfile)
 * MFCC
