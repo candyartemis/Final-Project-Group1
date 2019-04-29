@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from torch.autograd import Variable
 import time
-import librosa
+#import librosa
 
 import torch
 import torch.nn as nn
@@ -16,11 +16,11 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 start_time = time.time()
 # ----------------------------------------------------------------------------------------------------
 # Initial data sizes
-input_size = 42  # Number of inputs (splited because of the LSTM model) using Librosa
+input_size = 63  # Number of inputs (splited because of the LSTM model) using Librosa
 hidden_size1 = 500  # Number of neurons
 hidden_size2 = 30  # Number of neurons
 num_classes = 8  # 8 classes/labels
-num_epochs = 100  # Number of epochs
+num_epochs = 300  # Number of epochs
 batch_size = 100  # Number of audio clips to ran through 1 iteration
 learning_rate = 0.001
 confusion_m = np.zeros((8, 8))
@@ -55,9 +55,6 @@ print(len(validation))
 print("Test set size: ")
 print(len(test))
 
-#---------------------------------------------------------------------------------------------------
-#Get the nparray name
-#def full_name():
 """""
 #---------------------------------------------------------------------------------------------------
 #Load audio file linked to the uuid
@@ -94,9 +91,12 @@ def get_music_features(dataset):
 
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
         spectral_center = librosa.feature.spectral_centroid(y=y, sr=sr)
+        spectral_contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
 
         audio[i, :, 0:13] = mfcc.T[0:timeseries_length, :]
         audio[i, :, 13:14] = spectral_center.T[0:timeseries_length, :]
+        audio[i, :, 14:21] = spectral_contrast.T[0:timeseries_length, :]
+        
 
         if ((i + 1) % 100 == 0):
             print("Extracted features audio clip %i of %i." % (i + 1, len(dataset)))
@@ -114,8 +114,8 @@ np.save('test_audio_data.npy', test_audio_data)
 # ---------------------------------------------------------------------------------------------------
 # load npy music feature matrix data
 train_audio_data = np.load('train_audio_data.npy')
+print(train_audio_data.shape)
 validation_audio_data = np.load('validation_audio_data.npy')
-#test_audio_data = np.load('test_audio_data.npy')
 
 
 # test_audio_data = np.load('test_audio_data.npy')
@@ -229,7 +229,7 @@ correct = 0
 total = 0
 
 for i, data in enumerate(validation_loader):
-    print(i)
+
     audios = data['audio']
     labels = data['label']
 
