@@ -9,6 +9,7 @@ LTSM model is selected for the audio tagging since it is a time series problem. 
 * Main(time).py uses time domain data extracted from wavfile.
 * music_feature_loader.py needs to run first to created the 3 .npy files that will be used in main(frequency).py
 * Main(frequency).py uses time domain data extracted from librosa.
+* The find_file definition in each .py needs to be modified in order to successfully run the code since your directory might be different.
 
 ### Prerequisites
 
